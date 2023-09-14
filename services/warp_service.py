@@ -49,6 +49,9 @@ class WarpService:
     def set_total_liquidity(self, boot_price, ticker):
         ticker['liquidity_in_usd'] = boot_price*(ticker['liquidity_a']['amount'] + ticker['liquidity_b']['amount'])
 
+    def update_price_based_on_exponent(self, ticker):
+        ticker['last_price'] = ticker['last_price'] / 10**ticker['liquidity_a']['exponent'] * 10**ticker['liquidity_b']['exponent']
+
     def get_tickers(self):
         boot_price = self.get_boot_price()
         tickers = self.db_client.get_base_for_tickers()
@@ -57,16 +60,22 @@ class WarpService:
         ticker_dicts = [ticker._asdict() for ticker in tickers]
         denom_traces = self.db_client.get_denom_traces()
         # TODO: FIX AFTER DB UPDATED
-        datetime_24_hour_ago = datetime.now() - timedelta(weeks=55)
+        datetime_24_hour_ago = datetime.now() - timedelta(hours=24)
         datetime_24_hour_ago = datetime.strftime(datetime_24_hour_ago, '%Y-%m-%d %H:%M:%S')
-        height_from_search_volume = self.db_client.get_height_after_timestamp(datetime_24_hour_ago).height
-        offer_coins_volume = self.db_client.get_offer_coins_volume(height_from_search_volume)
-        demand_coins_volume = self.db_client.get_demand_coins_volume(height_from_search_volume)
+        height = self.db_client.get_height_after_timestamp(datetime_24_hour_ago)
+        height_from_search_volume = height.height if height else None
+        if height_from_search_volume:
+            offer_coins_volume = self.db_client.get_offer_coins_volume(height_from_search_volume)
+            demand_coins_volume = self.db_client.get_demand_coins_volume(height_from_search_volume)
+        else:
+            offer_coins_volume = []
+            demand_coins_volume = []
         for ticker in ticker_dicts:
             ticker['liquidity_a'] = json.loads(ticker['liquidity_a'])
             ticker['liquidity_b'] = json.loads(ticker['liquidity_b'])
             self.set_exponent_for_liquidity(ticker['liquidity_a'], denom_traces)
             self.set_exponent_for_liquidity(ticker['liquidity_b'], denom_traces)
+            self.update_price_based_on_exponent(ticker)
             self.convert_liquidity_amount_to_boot(ticker['liquidity_a'], tickers, hydrogen_to_boot)
             self.convert_liquidity_amount_to_boot(ticker['liquidity_b'], tickers, hydrogen_to_boot)
             self.set_total_liquidity(boot_price, ticker)

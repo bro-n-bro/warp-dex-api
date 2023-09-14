@@ -29,7 +29,7 @@ class DBClient:
 
     def get_pairs_liquidity_pool(self):
         return self.make_query(f"""
-            SELECT a_denom AS base, b_denom AS target, pool_id, CONCAT(a_denom, b_denom) AS ticker_id  FROM spacebox.liquidity_pool FINAL
+            SELECT a_denom AS base, b_denom AS target, pool_id, CONCAT(a_denom, '_',  b_denom) AS ticker_id  FROM spacebox.liquidity_pool FINAL
         """)
 
     def get_base_for_tickers(self):
@@ -38,7 +38,7 @@ class DBClient:
                 a_denom AS base_currency, 
                 b_denom AS target_currency, 
                 pool_id, 
-                CONCAT(a_denom, b_denom) AS ticker_id, 
+                CONCAT(a_denom, '_' ,b_denom) AS ticker_id, 
                 liquidity_a, 
                 liquidity_b, 
                 s.swap_price as last_price 
@@ -48,7 +48,7 @@ class DBClient:
                     select 
                         *, 
                         ROW_NUMBER() OVER (PARTITION BY pool_id ORDER BY height desc) AS ROWNUM 
-                    from spacebox.swap FINAL
+                    from spacebox.swap FINAL WHERE success = 1
                 ) 
                 where ROWNUM = 1
             ) as s on s.pool_id = lp.pool_id
@@ -73,6 +73,7 @@ class DBClient:
                 sum(offer_coin_amount) as sum 
             from spacebox.swap FINAL 
             where height > {height} 
+            and success = 1
             GROUP by pool_id, offer_coin_denom 
         """)
 
@@ -84,5 +85,6 @@ class DBClient:
                 sum(exchanged_demand_coin_amount) as sum 
             from spacebox.swap FINAL 
             where height > {height} 
+            and success = 1
             GROUP by pool_id, demand_coin_denom  
         """)
