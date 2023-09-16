@@ -88,3 +88,23 @@ class DBClient:
             and success = 1
             GROUP by pool_id, demand_coin_denom  
         """)
+
+    def get_historical_trades(self, ticker_id, limit, offset):
+        return self.make_query(f"""
+            select 
+                msg_index as id,
+                toUnixTimestamp(b.timestamp) as trade_timestamp, 
+                ticker_id,
+                if(offer_coin_denom = a_denom, 'sell', 'buy') as type,
+                if(offer_coin_denom = a_denom, offer_coin_amount, exchanged_demand_coin_amount) as base_volume,
+                if(offer_coin_denom = b_denom, offer_coin_amount, exchanged_demand_coin_amount) as target_volume,
+                if(offer_coin_denom = a_denom, swap_price, 1/swap_price) as price
+            from (
+                SELECT s.*, pool_id, CONCAT(a_denom, '_',  b_denom) as ticker_id, a_denom , b_denom  
+                FROM spacebox.liquidity_pool as lp FINAL
+                LEFT JOIN (select * from spacebox.swap FINAL) as s on s.pool_id = lp.pool_id
+                where ticker_id = '{ticker_id}' and s.success = True order by height DESC LIMIT {limit} OFFSET {offset}
+            ) as d
+            left join (select * from spacebox.block FINAL) as b on d.height = b.height
+        """)
+
