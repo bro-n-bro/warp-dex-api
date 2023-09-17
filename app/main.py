@@ -22,9 +22,10 @@ def get_pairs():
 def get_pairs():
     return WarpService().get_tickers()
 
+
 @app.get("/historical_trades/{ticker_id}/")
-def get_historical_trades(ticker_id, limit: int = 10, offset: int = 0):
-    return WarpService().get_historical_trades(ticker_id, limit, offset)
+def get_historical_trades(ticker_id, limit: int = 10, offset: int = 0, type: str = '', start_time: int = 0, end_time: int = 0):
+    return WarpService().get_historical_trades(ticker_id, limit, offset, type, start_time, end_time)
 
 
 if __name__ == '__main__':

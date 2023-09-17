@@ -89,7 +89,17 @@ class DBClient:
             GROUP by pool_id, demand_coin_denom  
         """)
 
-    def get_historical_trades(self, ticker_id, limit, offset):
+    def build_filter_for_historical_trades(self, type, start_time, end_time):
+        filter_string = ''
+        if type:
+            filter_string = f"WHERE type = '{type}'"
+        if start_time:
+            filter_string = f"{filter_string} AND trade_timestamp > {start_time}" if filter_string else f"WHERE trade_timestamp > {start_time}"
+        if end_time:
+            filter_string = f"{filter_string} AND trade_timestamp < {end_time}" if filter_string else f"WHERE trade_timestamp < {end_time}"
+        return filter_string
+
+    def get_historical_trades(self, ticker_id, limit, offset, type, start_time, end_time):
         return self.make_query(f"""
             select 
                 msg_index as id,
@@ -98,7 +108,7 @@ class DBClient:
                 if(offer_coin_denom = a_denom, 'sell', 'buy') as type,
                 if(offer_coin_denom = a_denom, offer_coin_amount, exchanged_demand_coin_amount) as base_volume,
                 if(offer_coin_denom = b_denom, offer_coin_amount, exchanged_demand_coin_amount) as target_volume,
-                if(offer_coin_denom = a_denom, swap_price, 1/swap_price) as price
+                swap_price as price
             from (
                 SELECT s.*, pool_id, CONCAT(a_denom, '_',  b_denom) as ticker_id, a_denom , b_denom  
                 FROM spacebox.liquidity_pool as lp FINAL
@@ -106,5 +116,6 @@ class DBClient:
                 where ticker_id = '{ticker_id}' and s.success = True order by height DESC LIMIT {limit} OFFSET {offset}
             ) as d
             left join (select * from spacebox.block FINAL) as b on d.height = b.height
+            {self.build_filter_for_historical_trades(type, start_time, end_time)}
         """)
 

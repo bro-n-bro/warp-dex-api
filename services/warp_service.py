@@ -89,5 +89,5 @@ class WarpService:
             ticker.pop('liquidity_b')
         return ticker_dicts
 
-    def get_historical_trades(self, ticker_id, limit, offset):
-        return [item._asdict() for item in self.db_client.get_historical_trades(ticker_id, limit, offset)]
+    def get_historical_trades(self, ticker_id, limit, offset, type, start_time, end_time):
+        return [item._asdict() for item in self.db_client.get_historical_trades(ticker_id, limit, offset, type, start_time, end_time)]
