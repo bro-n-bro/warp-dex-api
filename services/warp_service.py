@@ -27,6 +27,10 @@ class WarpService:
             exponent = -18
         elif denom_trace.startswith('milli'):
             exponent = -3
+        elif denom_trace == 'gravity0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2':
+            exponent = -18
+        elif denom_trace == 'aevmos':
+            exponent = -18
         liquidity['exponent'] = exponent
 
     def convert_liquidity_amount_to_boot(self, liquidity, tickers, hydrogen_to_boot):
@@ -41,9 +45,13 @@ class WarpService:
         liquidity['denom'] = 'boot'
         liquidity['amount'] = liquidity['amount'] * hydrogen_to_boot
 
-    def get_boot_price(self):
+    def get_boot_price(self, tickers):
         prices = self.bronbro_api_client.get_exchange_rates()
-        boot_exchange_rate = next((rate.get('price') for rate in prices if rate.get('symbol') == 'BOOT'), None)
+        atom_exchange_rate = next((rate.get('price') for rate in prices if rate.get('symbol') == 'ATOM'), None)
+        hydrogen_to_atom_price = next(ticker.last_price for ticker in tickers if ticker.ticker_id == 'hydrogen_ibc/15E9C5CF5969080539DB395FA7D9C0868265217EFC528433671AAF9B1912D159')
+        hydrogen_price = atom_exchange_rate / hydrogen_to_atom_price / 10**6
+        boot_to_hydrogen_price = next(ticker.last_price for ticker in tickers if ticker.ticker_id == 'boot_hydrogen')
+        boot_exchange_rate = hydrogen_price / boot_to_hydrogen_price
         return boot_exchange_rate
 
     def set_total_liquidity(self, boot_price, ticker):
@@ -52,9 +60,9 @@ class WarpService:
     def update_price_based_on_exponent(self, ticker):
         ticker['last_price'] = ticker['last_price'] / 10**ticker['liquidity_a']['exponent'] * 10**ticker['liquidity_b']['exponent']
 
-    def get_tickers(self):
-        boot_price = self.get_boot_price()
+    def get_tickers(self, show_all):
         tickers = self.db_client.get_base_for_tickers()
+        boot_price = self.get_boot_price(tickers)
         hydrogen_to_boot = next((ticker.last_price for ticker in tickers if
                                  ticker.base_currency == 'boot' and ticker.target_currency == 'hydrogen'), None)
         ticker_dicts = [ticker._asdict() for ticker in tickers]
@@ -87,6 +95,8 @@ class WarpService:
             ticker['target_volume'] = target_demand_coin_volume + target_offer_coin_volume
             ticker.pop('liquidity_a')
             ticker.pop('liquidity_b')
+        if not show_all:
+            ticker_dicts = list(filter(lambda x: (x['pool_id'] not in [13, 15, 19, 21, 22]), ticker_dicts))
         return ticker_dicts
 
     def get_historical_trades(self, ticker_id, limit, offset, type, start_time, end_time):

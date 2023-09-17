@@ -18,9 +18,14 @@ def get_pairs():
     return WarpService().get_pairs()
 
 
+@app.get("/dev/tickers/")
+def get_pairs():
+    return WarpService().get_tickers(True)
+
+
 @app.get("/tickers/")
 def get_pairs():
-    return WarpService().get_tickers()
+    return WarpService().get_tickers(False)
 
 
 @app.get("/historical_trades/{ticker_id}/")
