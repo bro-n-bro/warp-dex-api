@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+    spacebox_api:
+        build: .
+        restart: always
+        container_name: spacebox_api
+        ports:
+            - "5002:80"
+        volumes:
+            - ./config:/config
