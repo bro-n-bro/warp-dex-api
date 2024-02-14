@@ -1,10 +1,10 @@
 version: '3'
 
 services:
-    spacebox_api:
+    warp-dex:
         build: .
         restart: always
-        container_name: spacebox_api
+        container_name: warp-dex
         ports:
             - "5002:80"
         volumes:

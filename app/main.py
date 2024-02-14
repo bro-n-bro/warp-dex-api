@@ -1,3 +1,4 @@
+from urllib.parse import unquote
 
 import uvicorn
 from fastapi import FastAPI, Query
@@ -87,7 +88,7 @@ def get_pairs():
     return WarpService().get_tickers(False)
 
 
-@app.get("/historical_trades/{ticker_id}/")
+@app.get("/historical_trades/{ticker_id:path}/", name="path-convertor")
 def get_historical_trades(ticker_id, limit: int = 10, offset: int = 0, type: str = '', start_time: int = 0, end_time: int = 0):
     """
     This method retrieves historical trades for the requested trading pair. Each trade
