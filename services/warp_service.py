@@ -101,3 +101,41 @@ class WarpService:
 
     def get_historical_trades(self, ticker_id, limit, offset, type, start_time, end_time):
         return [item._asdict() for item in self.db_client.get_historical_trades(ticker_id, limit, offset, type, start_time, end_time)]
+
+    def get_spot_recent(self, ticker_id, limit, offset, type, start_time, end_time):
+        return [item._asdict() for item in self.db_client.get_spot_recent(ticker_id, limit, offset, type, start_time, end_time)]
+
+    def get_spot_summary(self):
+        datetime_24_hour_ago = datetime.now() - timedelta(hours=24)
+        datetime_24_hour_ago = datetime.strftime(datetime_24_hour_ago, '%Y-%m-%d %H:%M:%S')
+        height = self.db_client.get_height_after_timestamp(datetime_24_hour_ago)
+        result = self.db_client.get_spot_summary(height.height)
+        result = [item._asdict() for item in result]
+        for item in result:
+            item['price_change_percent_24h'] = abs((item['last_price']/item['first_price'] - 1) * 100) if item['first_price'] and item['last_price'] else 0
+            item.pop('pool_id')
+            item.pop('first_price')
+        return result
+
+    def get_spot_ticker(self):
+        datetime_24_hour_ago = datetime.now() - timedelta(hours=24)
+        datetime_24_hour_ago = datetime.strftime(datetime_24_hour_ago, '%Y-%m-%d %H:%M:%S')
+        height = self.db_client.get_height_after_timestamp(datetime_24_hour_ago)
+        result_list = self.db_client.get_spot_ticker(height.height)
+        result = {}
+        for item in result_list:
+            item_dict = item._asdict()
+            item_dict.pop('pool_id')
+            item_dict.pop('trading_pairs')
+            result[item.trading_pairs] = item_dict
+        return result
+
+    def get_wallet_assets(self):
+        db_response = self.db_client.get_denom_traces()
+        result = {}
+        for item in db_response:
+            result[item.base_denom] = {
+                'name': item.base_denom,
+                'contractAddress': item.denom_hash
+            }
+        return result
