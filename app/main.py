@@ -2,7 +2,7 @@ from urllib.parse import unquote
 
 import uvicorn
 from fastapi import FastAPI, Query
-from typing import Annotated, Union
+# from typing import Annotated, Union
 
 from services.warp_service import WarpService
 
@@ -31,7 +31,26 @@ def get_pairs():
     - Ticker ID (ticker_id): The unique identifier of the ticker, including both base and quote assets
     with a delimiter to separate them (e.g., boot_hydrogen for the price of BOOT quoted in HYDROGEN).
     """
-    return WarpService().get_pairs()
+    return WarpService().get_pairs(False)
+
+
+@app.get("/dev/pairs/")
+def get_pairs():
+    """
+    This method retrieves all trading pairs available on the specified DEX.
+    Each trading pair consists of a base asset and a target asset. Additionally, it provides the
+    pool ID associated with each trading pair, as well as a unique identifier for
+    the ticker, which includes both the base and quote assets with a delimiter
+    separating them.
+
+    returns:\n
+    - Base asset (base): The denomination of the base asset. \n
+    - Target asset (quote): The denomination of the quote asset.\n
+    - Pool ID (pool_id): The identifier of the liquidity pool associated with this trading pair.\n
+    - Ticker ID (ticker_id): The unique identifier of the ticker, including both base and quote assets
+    with a delimiter to separate them (e.g., boot_hydrogen for the price of BOOT quoted in HYDROGEN).
+    """
+    return WarpService().get_pairs(True)
 
 
 @app.get("/dev/tickers/")
@@ -136,7 +155,26 @@ def get_spot_summary():
         - highest_price_24h (decimal): Highest price of base currency based on given quote currency in the last 24-hrs.\n
         - lowest_price_24h (decimal): Lowest price of base currency based on given quote currency in the last 24-hrs.\n
     """
-    return WarpService().get_spot_summary()
+    return WarpService().get_spot_summary(False)
+
+@app.get("/v1/dev/spot/summary")
+def get_spot_summary():
+    """
+        Overview of market data for all tickers and all markets.
+
+        returns\n
+
+        - trading_pairs (string): Identifier of a ticker with delimiter to separate base/quote, e.g. BTC-USD (Price of BTC is quoted in USD).\n
+        - last_price (decimal): Last transacted price of base currency based on given quote currency.\n
+        - lowest_ask (decimal): Lowest Ask price of base currency based on given quote currency.\n
+        - highest_bid (decimal): Highest bid price of base currency based on given quote currency.\n
+        - base_volume (decimal): 24-hr volume of market pair denoted in BASE currency.\n
+        - quote_volume (decimal): 24-hr volume of market pair denoted in QUOTE currency.\n
+        - price_change_percent_24h (decimal): 24-hr % price change of market pair.\n
+        - highest_price_24h (decimal): Highest price of base currency based on given quote currency in the last 24-hrs.\n
+        - lowest_price_24h (decimal): Lowest price of base currency based on given quote currency in the last 24-hrs.\n
+    """
+    return WarpService().get_spot_summary(True)
 
 
 @app.get("/v1/wallet/assets")
@@ -163,7 +201,20 @@ def get_spot_ticker():
     - base_volume (decimal): 24-hour trading volume denoted in BASE currency.\n
     - quote_volume (decimal): 24-hour trading volume denoted in QUOTE currency.\n
     """
-    return WarpService().get_spot_ticker()
+    return WarpService().get_spot_ticker(False)
+
+@app.get("/v1/dev/spot/ticker")
+def get_spot_ticker():
+    """
+    24-hour rolling window price change statistics for all markets.
+
+    returns\n
+
+    - last_price (decimal): Last transacted price of base currency based on given quote currency.\n
+    - base_volume (decimal): 24-hour trading volume denoted in BASE currency.\n
+    - quote_volume (decimal): 24-hour trading volume denoted in QUOTE currency.\n
+    """
+    return WarpService().get_spot_ticker(True)
 
 
 @app.get("/v1/spot/recent")
@@ -188,6 +239,14 @@ def get_spot_recent(ticker_root: str ='', limit: int = 10, offset: int = 0, type
     - type (string): Used to determine whether the transaction originated as a buy or sell.\n
     """
     return WarpService().get_spot_recent(ticker_root, limit, offset, type, start_time, end_time)
+
+
+@app.get("/v1/24h_volume_in_usd")
+def get_spot_recent():
+    """
+    Last 24 hours volume in usd
+    """
+    return WarpService().get_24_volume_usd()
 
 if __name__ == '__main__':
     uvicorn.run(app, host="0.0.0.0", port=8000)
