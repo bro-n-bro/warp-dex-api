@@ -27,9 +27,13 @@ class DBClient:
         result = [Record(*item) for item in query.result_rows]
         return result
 
-    def get_pairs_liquidity_pool(self):
+    def get_pairs_liquidity_pool(self, allowed_pool_ids):
+        filter = ''
+        if allowed_pool_ids:
+            filter = f'WHERE pool_id IN ({", ".join(map(str, allowed_pool_ids))})'
         return self.make_query(f"""
             SELECT a_denom AS base, b_denom AS target, pool_id, CONCAT(a_denom, '_',  b_denom) AS ticker_id  FROM spacebox.liquidity_pool FINAL
+            {filter}
         """)
 
     def get_base_for_tickers(self):
@@ -137,7 +141,10 @@ class DBClient:
             left join (select * from spacebox.block FINAL) as b on d.height = b.height
             {self.build_filter_for_historical_trades(type, start_time, end_time)}
         """)
-    def get_spot_summary(self, height):
+    def get_spot_summary(self, height, allowed_pool_ids):
+        filter = ''
+        if allowed_pool_ids:
+            filter = f'WHERE pool_id IN ({", ".join(map(str, allowed_pool_ids))})'
         return self.make_query(f"""
             SELECT DISTINCT *
             FROM
@@ -240,9 +247,13 @@ class DBClient:
                           AND s.height > {height} )
                      WHERE TYPE = 'buy' )
                   GROUP BY pool_id) AS la ON la.pool_id = b.pool_id)
+                  {filter}
         """)
 
-    def get_spot_ticker(self, height):
+    def get_spot_ticker(self, height, allowed_pool_ids):
+        filter = ''
+        if allowed_pool_ids:
+            filter = f'WHERE pool_id IN ({", ".join(map(str, allowed_pool_ids))})'
         return self.make_query(f"""
             SELECT DISTINCT *
             FROM
@@ -284,4 +295,18 @@ class DBClient:
                           AND s.height > {height} ))
                   GROUP BY pool_id) AS volumes ON volumes.pool_id = b.pool_id
             )
+            {filter}
+        """)
+
+    def get_last_24_hours_volume_pairs(self, height, allowed_pool_ids):
+        filter = f'({", ".join(map(str, allowed_pool_ids))})'
+        return self.make_query(f"""
+            select 
+                offer_coin_denom as base_currency, 
+                demand_coin_denom as target_currency, 
+                sum(offer_coin_amount) as base_volume, 
+                sum(exchanged_demand_coin_amount) as target_volume 
+            from spacebox.swap
+            where height  > {height} and success = TRUE and pool_id in {filter}
+            group by offer_coin_denom , demand_coin_denom
         """)
